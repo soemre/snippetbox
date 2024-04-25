@@ -1,15 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/emresoysuren/snippetbox/internal/models"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
-	logger *slog.Logger
-	cfg    config
+	logger   *slog.Logger
+	cfg      config
+	snippets *models.SnippetModel
 }
 
 func main() {
@@ -19,7 +25,7 @@ func main() {
 	app.cfg.registerFlags(nil)
 	flag.Parse()
 
-	// Dependencies
+	// Dependencies - Logger
 	slogOpts := new(slog.HandlerOptions)
 	if app.cfg.debug {
 		slogOpts.Level = slog.LevelDebug
@@ -27,9 +33,34 @@ func main() {
 	}
 	app.logger = slog.New(slog.NewTextHandler(os.Stdout, slogOpts))
 
+	// Dependencies - DB
+	db, err := openDB(app.cfg.dsn)
+	if err != nil {
+		app.logger.Error(err.Error())
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// Dependencies - Models
+	app.snippets = &models.SnippetModel{DB: db}
+
 	// Serve
 	app.logger.Info("starting server", slog.String("addr", app.cfg.addr))
-	err := http.ListenAndServe(app.cfg.addr, app.routes())
+	err = http.ListenAndServe(app.cfg.addr, app.routes())
 	app.logger.Error(err.Error())
 	os.Exit(1)
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = db.Ping(); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return db, nil
 }
