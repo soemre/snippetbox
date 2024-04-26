@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/emresoysuren/snippetbox/internal/models"
-
+	"github.com/go-playground/form/v4"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -18,6 +18,7 @@ type application struct {
 	cfg           config
 	snippets      *models.SnippetModel
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
@@ -52,6 +53,9 @@ func main() {
 
 	// Dependencies - Models
 	app.snippets = &models.SnippetModel{DB: db}
+
+	// Dependencies - Form Decoder
+	app.formDecoder = form.NewDecoder()
 
 	// Serve
 	app.logger.Info("starting server", slog.String("addr", app.cfg.addr))
