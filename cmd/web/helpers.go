@@ -45,8 +45,7 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 	}
 
 	w.WriteHeader(status)
-	_, err := buf.WriteTo(w)
-	if err != nil {
+	if _, err := buf.WriteTo(w); err != nil {
 		app.serverError(w, r, err)
 	}
 }
@@ -54,6 +53,7 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 func (app *application) newTemplateData(r *http.Request) templateData {
 	return templateData{
 		CurrentYear: time.Now().Year(),
+		Flash:       app.sessionManager.PopString(r.Context(), "flash"),
 	}
 }
 

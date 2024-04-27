@@ -7,6 +7,8 @@ type config struct {
 	dsn       string
 	staticDir string
 	debug     bool
+	tlsCert   string
+	tlsKey    string
 }
 
 // If flagSet is nil, it will be used as flag.CommandLine by default.
@@ -18,4 +20,6 @@ func (cfg *config) registerFlags(flagSet *flag.FlagSet) {
 	flagSet.StringVar(&cfg.dsn, "dsn", "web:admin@/snippetbox?parseTime=true", "MySQL data source name")
 	flagSet.StringVar(&cfg.staticDir, "static-dir", "./ui/static", "Path to static assets")
 	flagSet.BoolVar(&cfg.debug, "debug", false, "Debug Mode")
+	flagSet.StringVar(&cfg.tlsCert, "tls-cert", "./tls/cert.pem", "Path to TLS Certificate")
+	flagSet.StringVar(&cfg.tlsKey, "tls-key", "./tls/key.pem", "Path to TLS Key")
 }
