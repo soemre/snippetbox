@@ -19,53 +19,56 @@ import (
 
 type application struct {
 	logger         *slog.Logger
-	cfg            config
+	cfg            *config
 	snippets       *models.SnippetModel
+	users          *models.UserModel
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
 }
 
 func main() {
-	app := new(application)
-
 	// Flags
-	app.cfg.registerFlags(nil)
+	cfg := new(config)
+	cfg.registerFlags(nil)
 	flag.Parse()
 
-	// Dependencies - Logger
+	// Dependencies Start
 	slogOpts := new(slog.HandlerOptions)
-	if app.cfg.debug {
+	if cfg.debug {
 		slogOpts.Level = slog.LevelDebug
 		slogOpts.AddSource = true
 	}
-	app.logger = slog.New(slog.NewTextHandler(os.Stdout, slogOpts))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, slogOpts))
 
-	// Dependencies - DB
-	db, err := openDB(app.cfg.dsn)
+	db, err := openDB(cfg.dsn)
 	if err != nil {
-		app.logger.Error(err.Error())
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 	defer db.Close()
 
 	templateCache, err := newTemplateCache()
 	if err != nil {
-		app.logger.Error(err.Error())
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
-	app.templateCache = templateCache
 
-	// Dependencies - Models
-	app.snippets = &models.SnippetModel{DB: db}
+	sessionManager := scs.New()
+	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+	sessionManager.Cookie.Secure = true
 
-	// Dependencies - Form Decoder
-	app.formDecoder = form.NewDecoder()
-
-	app.sessionManager = scs.New()
-	app.sessionManager.Store = mysqlstore.New(db)
-	app.sessionManager.Lifetime = 12 * time.Hour
-	app.sessionManager.Cookie.Secure = true
+	app := &application{
+		logger:         logger,
+		cfg:            cfg,
+		snippets:       &models.SnippetModel{DB: db},
+		users:          &models.UserModel{DB: db},
+		formDecoder:    form.NewDecoder(),
+		sessionManager: sessionManager,
+		templateCache:  templateCache,
+	}
+	// Dependencies End
 
 	tlsConfig := tls.Config{
 		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
