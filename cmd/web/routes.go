@@ -15,6 +15,8 @@ func (app *application) routes() http.Handler {
 	fileServer := http.FileServer(neuteredFileSystem{http.FS(ui.Files)})
 	mux.Handle("GET /static/", fileServer)
 
+	mux.HandleFunc("GET /ping", ping)
+
 	// Handlers - Unprotected
 	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf, app.authenticate)
 
